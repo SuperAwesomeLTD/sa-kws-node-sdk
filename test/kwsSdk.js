@@ -20,7 +20,7 @@ describe('KwsSdk', function () {
         saAppApiKey: 'test_key',
         kwsApiHost: 'https://kwsapi.test.superawesome.tv'
     };
-    var kwsApi = new KwsSdk(kwsSdkOpts);
+    var kwsSdk = new KwsSdk(kwsSdkOpts);
 
     function getFunctionFromName(api, functionName) {
         var parts = functionName.split('.');
@@ -77,7 +77,7 @@ describe('KwsSdk', function () {
             'app.notify'
         ], function (functionName) {
             it('should create ' + functionName, function (done) {
-                var expectedFunction = getFunctionFromName(kwsApi, functionName);
+                var expectedFunction = getFunctionFromName(kwsSdk, functionName);
                 should(typeof expectedFunction).eql('function');
                 done();
             });
@@ -87,7 +87,7 @@ describe('KwsSdk', function () {
     describe('get token', function () {
         
         it('should request a token in the first call', function (done) {
-            kwsApi.app.user.getMap()
+            kwsSdk.app.user.getMap()
                 .finally(function () {
                     should(stubs.post.callCount).eql(1);
                     done();
@@ -136,7 +136,7 @@ describe('KwsSdk', function () {
             it('should make a ' + item.expectedMethod + ' request to ' + item.expectedPath + 
                 ' when calling ' + item.functionName, function (done) {
 
-                var expectedFunction = getFunctionFromName(kwsApi, item.functionName);
+                var expectedFunction = getFunctionFromName(kwsSdk, item.functionName);
 
                 expectedFunction(item.params)
                     .then(function (resp)  {
