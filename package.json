@@ -1,0 +1,19 @@
+{
+  "name": "kws-node-sdk",
+  "version": "0.1.0-alpha0",
+  "description": "KWS Node App SDK",
+  "main": "./lib/kwsSdk.js",
+  "dependencies": {
+    "atob": "~1.1.2",
+    "bluebird": "~2.9.14",
+    "cookie-parser": "~1.3.4",
+    "express": "~4.12.2",
+    "request-promise": "~0.4.0"
+  },
+  "devDependencies": {
+    "jsonwebtoken": "~5.0.5",
+    "lodash": "~3.10.1",
+    "should": "~7.1.0",
+    "sinon": "~1.16.1"
+  }
+}
