@@ -111,17 +111,26 @@ describe('KwsSdk', function () {
             {
                 functionName: 'app.user.getMap',
                 expectedPath: '/v1/apps/' + appId + '/users/map',
-                expectedMethod: 'get'
+                expectedMethod: 'get',
+                params: {},
+                expectedJson: true,
+                expectedQs: {}
             },
             {
                 functionName: 'app.getStatistics',
                 expectedPath: '/v1/apps/' + appId + '/statistics',
-                expectedMethod: 'get'
+                expectedMethod: 'get',
+                params: {},
+                expectedJson: true,
+                expectedQs: {}
             },
             {
                 functionName: 'app.notify',
                 expectedPath: '/v1/apps/' + appId + '/notify',
-                expectedMethod: 'post'               
+                expectedMethod: 'post',
+                params: {attribute: 'whatever'},
+                expectedJson: {attribute: 'whatever'},
+                expectedQs: undefined             
             }
         ], function (item) {
             it('should make a ' + item.expectedMethod + ' request to ' + item.expectedPath + 
@@ -129,12 +138,16 @@ describe('KwsSdk', function () {
 
                 var expectedFunction = getFunctionFromName(kwsApi, item.functionName);
 
-                expectedFunction()
+                expectedFunction(item.params)
                     .then(function (resp)  {
                         should(resp).eql(stubData.resp);
                         should(stubs[item.expectedMethod].callCount).eql(1);
                         should(stubs[item.expectedMethod].lastCall.args[0])
                             .eql(kwsSdkOpts.kwsApiHost + item.expectedPath);
+                        should(stubs[item.expectedMethod].lastCall.args[1].json)
+                            .eql(item.expectedJson);
+                        should(stubs[item.expectedMethod].lastCall.args[1].qs)
+                            .eql(item.expectedQs);
                         done();
                     });
             });
@@ -169,27 +182,42 @@ describe('KwsSdk', function () {
             {
                 functionName: 'user.get',
                 expectedPath: '/v1/users/' + userId,
-                expectedMethod: 'get'
+                expectedMethod: 'get',
+                params: {userId: userId},
+                expectedJson: true,
+                expectedQs: {}
             },
             {
                 functionName: 'user.update',
                 expectedPath: '/v1/users/' + userId,
-                expectedMethod: 'put'
+                expectedMethod: 'put',
+                params: {userId: userId, firstName: 'whatever'},
+                expectedJson: {firstName: 'whatever'},
+                expectedQs: undefined  
             },
             {
                 functionName: 'user.app.list',
                 expectedPath: '/v1/users/' + userId + '/apps',
-                expectedMethod: 'get'               
+                expectedMethod: 'get',
+                params: {userId: userId},
+                expectedJson: true,
+                expectedQs: {}             
             },
             {
                 functionName: 'user.app.create',
                 expectedPath: '/v1/users/' + userId + '/apps',
-                expectedMethod: 'post'               
+                expectedMethod: 'post',
+                params: {userId: userId, appId: appId},
+                expectedJson: {appId: appId},
+                expectedQs: undefined              
             },
             {
                 functionName: 'app.user.list',
                 expectedPath: '/v1/apps/' + appId + '/users',
-                expectedMethod: 'get'
+                expectedMethod: 'get',
+                params: {},
+                expectedJson: true,
+                expectedQs: {}
             }
         ], function (item) {
             it('should make a ' + item.expectedMethod + ' request to ' + item.expectedPath + 
@@ -197,12 +225,16 @@ describe('KwsSdk', function () {
 
                 var expectedFunction = getFunctionFromName(customKwsApi, item.functionName);
 
-                expectedFunction({userId: userId, appId: appId})
+                expectedFunction(item.params)
                     .then(function (resp)  {
                         should(resp).eql(stubData.resp);
                         should(stubs[item.expectedMethod].callCount).eql(1);
                         should(stubs[item.expectedMethod].lastCall.args[0])
                             .eql(kwsSdkOpts.kwsApiHost + item.expectedPath);
+                        should(stubs[item.expectedMethod].lastCall.args[1].json)
+                            .eql(item.expectedJson);
+                        should(stubs[item.expectedMethod].lastCall.args[1].qs)
+                            .eql(item.expectedQs);
                         done();
                     });
             });
