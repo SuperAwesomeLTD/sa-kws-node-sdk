@@ -1,5 +1,5 @@
 {
-  "name": "kws-node-sdk",
+  "name": "sa-kws-node-sdk",
   "version": "0.1.0-alpha1",
   "description": "KWS Node App SDK",
   "main": "./lib/kwsSdk.js",
