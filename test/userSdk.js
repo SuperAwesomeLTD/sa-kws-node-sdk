@@ -250,4 +250,20 @@ describe('UserSdk', function () {
         });
     });
 
+    describe('get user id', function () {
+        it('should return the user id', function () {
+            var userId = userSdk.getUserId();
+            should(userId).eql(222);
+        });
+
+        describe('no token', function () {
+            var testUserSdk = new UserSdk({});
+            
+            it('should return null', function () {
+                var userId = testUserSdk.getUserId();
+                should(userId).eql(null);
+            });
+        });
+    });
+
 });

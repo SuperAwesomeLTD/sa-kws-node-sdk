@@ -1,6 +1,6 @@
 {
   "name": "sa-kws-node-sdk",
-  "version": "0.1.0-alpha2",
+  "version": "0.1.0-alpha3",
   "description": "KWS Node App SDK",
   "main": "./lib/kwsSdk.js",
   "dependencies": {
