@@ -14,7 +14,8 @@ describe('UserSdk', function () {
     var tokenData = {
         appId: 1234,
         clientId: 'test_app',
-        userId: 222
+        userId: 222,
+        exp: Math.ceil(Date.now() / 1000 + 3600)
     };
 
     var sandbox;
@@ -258,6 +259,20 @@ describe('UserSdk', function () {
 
         describe('no token', function () {
             var testUserSdk = new UserSdk({});
+            
+            it('should return null', function () {
+                var userId = testUserSdk.getUserId();
+                should(userId).eql(null);
+            });
+        });
+
+        describe('token expired', function () {
+            var testUserSdk = new UserSdk({
+                appId: 1234,
+                clientId: 'test_app',
+                userId: 222,
+                exp: Math.floor(Date.now() / 1000 - 1)
+            });
             
             it('should return null', function () {
                 var userId = testUserSdk.getUserId();
