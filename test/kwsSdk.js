@@ -9,6 +9,7 @@ var _ = require('lodash');
 var should = require('should');
 var sinon = require('sinon');
 var rp = require('request-promise');
+var crypto = require('crypto');
 
 describe('KwsSdk', function () {
 
@@ -30,6 +31,19 @@ describe('KwsSdk', function () {
         }
 
         return expectedFunction;     
+    }
+
+    function generateWebhookSignature(originalUrl, data, secretKey) {
+        var signedData = originalUrl;
+
+        for(var key in data) {
+            signedData += key;
+            signedData += data[key];
+        }
+
+        signedData += secretKey;
+
+        return crypto.createHmac('sha1', secretKey).update(signedData).digest('hex').toString('base64');
     }
 
     beforeEach(function (done) {
@@ -239,6 +253,53 @@ describe('KwsSdk', function () {
                     });
             });
         });
+    });
+
+    describe('webhook middleware', function () {
+        it('should validate the signature', function(done){
+            var secretKey = 'secretTestKey';
+            var middleware = kwsSdk.validWebhookSignature(secretKey);
+            var next = function(){
+                should(true).eql(false);
+            };
+
+            var res = {
+                sendStatus: function(val){
+                    should(val).eql(401);
+                }
+            };
+
+            var req = {
+                originalUrl: '/webhook/endpoint',
+                body: {
+                    permissions: {
+                        email: 'Denied',
+                        firstName: 'Granted'
+                    },
+                },
+                headers: {}
+            };
+
+            // first test with empty headers
+            middleware(req, res, next);
+
+            //with an invalid signature
+            req.headers['x-kwsapi-signature'] = 'Invalid signature';
+            middleware(req, res, next);
+
+            //now with a valid signature
+            req.headers['x-kwsapi-signature'] = generateWebhookSignature(req.originalUrl, req.body, secretKey);
+            res.sendStatus = function(){
+                should(true).eql(false);
+            };
+            next = function() {
+               should(true).eql(true);
+            };
+
+            middleware(req, res, next);
+
+            done();
+        })
     });
 
 });
