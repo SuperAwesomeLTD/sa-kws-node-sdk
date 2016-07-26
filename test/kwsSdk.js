@@ -249,9 +249,40 @@ describe('KwsSdk', function () {
                             .eql(item.expectedJson);
                         should(stubs[item.expectedMethod].lastCall.args[1].qs)
                             .eql(item.expectedQs);
+                        should(stubs[item.expectedMethod].lastCall.args[1].headers['X-KWS-external-ids'])
+                            .eql(undefined);
                         done();
                     });
             });
+        });
+    });
+
+    describe('api call to an endpoint with userId and externalUserIds set in the init', function () {
+
+        it('should make the request with the X-KWS-external-ids header set', function (done) {
+
+            var appId = 1234;
+            var userId = 222;
+            var kwsSdk = new KwsSdk({
+                saAppId: 'test_app',
+                saAppApiKey: 'test_key',
+                kwsApiHost: 'https://kwsapi.test.superawesome.tv',
+                externalUserIds: true,
+                endpoints: [
+                    'user.app.create'
+                ]
+            });
+
+            var expectedFunction = getFunctionFromName(kwsSdk, 'user.app.create');
+
+            expectedFunction({userId: userId, appId: appId})
+                .then(function (resp)  {
+                    should(resp).eql(stubData.resp);
+                    should(stubs.post.callCount).eql(2);
+                    should(stubs.post.lastCall.args[0]).eql(kwsSdkOpts.kwsApiHost + '/v1/users/' + userId + '/apps');
+                    should(stubs.post.lastCall.args[1].headers['X-KWS-external-ids']).eql(true);
+                    done();
+                });
         });
     });
 
