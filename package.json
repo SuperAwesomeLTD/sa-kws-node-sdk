@@ -1,6 +1,6 @@
 {
   "name": "sa-kws-node-sdk",
-  "version": "0.2.4",
+  "version": "1.0.0",
   "description": "KWS Node App SDK",
   "main": "./lib/kwsSdk.js",
   "dependencies": {
@@ -10,11 +10,11 @@
     "decamelize": "~1.1.1",
     "express": "~4.12.2",
     "inflected": "^1.1.7",
-    "request-promise": "~0.4.0"
+    "lodash": "^4.17.2",
+    "request-promise": "^0.4.3"
   },
   "devDependencies": {
     "jsonwebtoken": "~5.0.5",
-    "lodash": "~3.10.1",
     "should": "~7.1.0",
     "sinon": "~1.16.1"
   }

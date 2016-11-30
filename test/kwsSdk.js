@@ -1,4 +1,4 @@
-/* globals describe, it, before, after */
+/* globals describe, it, beforeEach, afterEach */
 
 'use strict';
 
@@ -30,7 +30,7 @@ describe('KwsSdk', function () {
             expectedFunction = expectedFunction[parts[i]];
         }
 
-        return expectedFunction;     
+        return expectedFunction;
     }
 
     function generateWebhookSignature(originalUrl, data, secretKey) {
@@ -55,23 +55,23 @@ describe('KwsSdk', function () {
 
         sandbox = sinon.sandbox.create();
 
-        stubs.post = sandbox.stub(rp, 'post', function (url, opts) {
+        stubs.post = sandbox.stub(rp, 'post', function (url) {
             if (url === kwsSdkOpts.kwsApiHost + '/oauth/token') {
-                return BPromise.resolve({access_token: stubData.token});
+                return BPromise.resolve({access_token: stubData.token}); // jshint ignore:line
             } else {
                 return BPromise.resolve(stubData.resp);
             }
         });
 
-        stubs.get = sandbox.stub(rp, 'get', function (url, opts) {
+        stubs.get = sandbox.stub(rp, 'get', function () {
             return BPromise.resolve(stubData.resp);
         });
 
-        stubs.put = sandbox.stub(rp, 'put', function (url, opts) {
+        stubs.put = sandbox.stub(rp, 'put', function () {
             return BPromise.resolve(stubData.resp);
         });
 
-        stubs.del = sandbox.stub(rp, 'del', function (url, opts) {
+        stubs.del = sandbox.stub(rp, 'del', function () {
             return BPromise.resolve(stubData.resp);
         });
 
@@ -86,9 +86,12 @@ describe('KwsSdk', function () {
     describe('default endpoints', function () {
 
         _.each([
-            'app.user.getMap',
-            'app.getStatistics',
-            'app.notify'
+            'v1.app.user.getMap',
+            'v1.app.getStatistics',
+            'v1.app.notify',
+            'app.user.getScore',
+            'app.user.getAppPoints',
+            'app.user.getGlobalPoints'
         ], function (functionName) {
             it('should create ' + functionName, function (done) {
                 var expectedFunction = getFunctionFromName(kwsSdk, functionName);
@@ -99,9 +102,9 @@ describe('KwsSdk', function () {
     });
 
     describe('get token', function () {
-        
+
         it('should request a token in the first call', function (done) {
-            kwsSdk.app.user.getMap()
+            kwsSdk.v1.app.user.getMap()
                 .finally(function () {
                     should(stubs.post.callCount).eql(1);
                     done();
@@ -123,7 +126,7 @@ describe('KwsSdk', function () {
 
         _.each([
             {
-                functionName: 'app.user.getMap',
+                functionName: 'v1.app.user.getMap',
                 expectedPath: '/v1/apps/' + appId + '/users/map',
                 expectedMethod: 'get',
                 params: {},
@@ -131,7 +134,7 @@ describe('KwsSdk', function () {
                 expectedQs: {}
             },
             {
-                functionName: 'app.getStatistics',
+                functionName: 'v1.app.getStatistics',
                 expectedPath: '/v1/apps/' + appId + '/statistics',
                 expectedMethod: 'get',
                 params: {},
@@ -139,15 +142,15 @@ describe('KwsSdk', function () {
                 expectedQs: {}
             },
             {
-                functionName: 'app.notify',
+                functionName: 'v1.app.notify',
                 expectedPath: '/v1/apps/' + appId + '/notify',
                 expectedMethod: 'post',
                 params: {attribute: 'whatever'},
                 expectedJson: {attribute: 'whatever'},
-                expectedQs: undefined             
+                expectedQs: undefined
             }
         ], function (item) {
-            it('should make a ' + item.expectedMethod + ' request to ' + item.expectedPath + 
+            it('should make a ' + item.expectedMethod + ' request to ' + item.expectedPath +
                 ' when calling ' + item.functionName, function (done) {
 
                 var expectedFunction = getFunctionFromName(kwsSdk, item.functionName);
@@ -171,18 +174,30 @@ describe('KwsSdk', function () {
     describe('overriding endpoints', function () {
         var appId = 1234;
         var userId = 222;
-        var customEndpoints = [
-            'user.get',
-            'user.update',
-            'user.app.list',
-            'user.app.create',
-            'app.user.list'
-        ];
+        var customEndpoints = {
+            'v1': {
+                'user.get': {
+                    'alias': null
+                },
+                'user.update': {
+                    'alias': null
+                },
+                'user.app.list': {
+                    'alias': null
+                },
+                'user.app.create': {
+                    'alias': null
+                },
+                'app.user.list': {
+                    'alias': null
+                }
+            }
+        };
+
         var customOpts = _.extend(kwsSdkOpts, {
             endpoints: customEndpoints
         });
-
-        var customKwsApi = new KwsSdk(kwsSdkOpts);
+        var customKwsApi = new KwsSdk(customOpts);
 
         beforeEach(function (done) {
             stubData.token = jwt.sign({
@@ -194,7 +209,7 @@ describe('KwsSdk', function () {
 
         _.each([
             {
-                functionName: 'user.get',
+                functionName: 'v1.user.get',
                 expectedPath: '/v1/users/' + userId,
                 expectedMethod: 'get',
                 params: {userId: userId},
@@ -202,31 +217,31 @@ describe('KwsSdk', function () {
                 expectedQs: {}
             },
             {
-                functionName: 'user.update',
+                functionName: 'v1.user.update',
                 expectedPath: '/v1/users/' + userId,
                 expectedMethod: 'put',
                 params: {userId: userId, firstName: 'whatever'},
                 expectedJson: {firstName: 'whatever'},
-                expectedQs: undefined  
+                expectedQs: undefined
             },
             {
-                functionName: 'user.app.list',
+                functionName: 'v1.user.app.list',
                 expectedPath: '/v1/users/' + userId + '/apps',
                 expectedMethod: 'get',
                 params: {userId: userId},
                 expectedJson: true,
-                expectedQs: {}             
+                expectedQs: {}
             },
             {
-                functionName: 'user.app.create',
+                functionName: 'v1.user.app.create',
                 expectedPath: '/v1/users/' + userId + '/apps',
                 expectedMethod: 'post',
                 params: {userId: userId, appId: appId},
                 expectedJson: {appId: appId},
-                expectedQs: undefined              
+                expectedQs: undefined
             },
             {
-                functionName: 'app.user.list',
+                functionName: 'v1.app.user.list',
                 expectedPath: '/v1/apps/' + appId + '/users',
                 expectedMethod: 'get',
                 params: {},
@@ -234,7 +249,7 @@ describe('KwsSdk', function () {
                 expectedQs: {}
             }
         ], function (item) {
-            it('should make a ' + item.expectedMethod + ' request to ' + item.expectedPath + 
+            it('should make a ' + item.expectedMethod + ' request to ' + item.expectedPath +
                 ' when calling ' + item.functionName, function (done) {
 
                 var expectedFunction = getFunctionFromName(customKwsApi, item.functionName);
@@ -268,12 +283,15 @@ describe('KwsSdk', function () {
                 saAppApiKey: 'test_key',
                 kwsApiHost: 'https://kwsapi.test.superawesome.tv',
                 externalUserIds: true,
-                endpoints: [
-                    'user.app.create'
-                ]
+                endpoints: {
+                    'v1': {
+                        'user.app.create': {
+                            'alias': null
+                        }
+                    }
+                }
             });
-
-            var expectedFunction = getFunctionFromName(kwsSdk, 'user.app.create');
+            var expectedFunction = getFunctionFromName(kwsSdk, 'v1.user.app.create');
 
             expectedFunction({userId: userId, appId: appId})
                 .then(function (resp)  {
@@ -330,7 +348,7 @@ describe('KwsSdk', function () {
             middleware(req, res, next);
 
             done();
-        })
+        });
     });
 
 });
