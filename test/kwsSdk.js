@@ -2,31 +2,30 @@
 
 'use strict';
 
-var KwsSdk = require('../lib/kwsSdk');
-var BPromise = require('bluebird');
-var jwt = require('jsonwebtoken');
-var _ = require('lodash');
-var should = require('should');
-var sinon = require('sinon');
-var rp = require('request-promise');
-var crypto = require('crypto');
+const KwsSdk = require('../lib/kwsSdk');
+const BPromise = require('bluebird');
+const jwt = require('jsonwebtoken');
+const _ = require('lodash');
+const should = require('should');
+const sinon = require('sinon');
+const rp = require('request-promise');
+const crypto = require('crypto');
 
 describe('KwsSdk', function () {
-
-    var sandbox;
-    var stubs = {};
-    var stubData;
-    var kwsSdkOpts = {
+    let sandbox;
+    let stubs = {};
+    let stubData;
+    let kwsSdkOpts = {
         saAppId: 'test_app',
         saAppApiKey: 'test_key',
         kwsApiHost: 'https://kwsapi.test.superawesome.tv'
     };
-    var kwsSdk = new KwsSdk(kwsSdkOpts);
+    let kwsSdk = new KwsSdk(kwsSdkOpts);
 
     function getFunctionFromName(api, functionName) {
-        var parts = functionName.split('.');
-        var expectedFunction = api;
-        for (var i = 0; i < parts.length; i++) {
+        let parts = functionName.split('.');
+        let expectedFunction = api;
+        for (let i = 0; i < parts.length; i++) {
             expectedFunction = expectedFunction[parts[i]];
         }
 
@@ -151,7 +150,7 @@ describe('KwsSdk', function () {
             }
         ], function (item) {
             it('should make a ' + item.expectedMethod + ' request to ' + item.expectedPath +
-                ' when calling ' + item.functionName, function (done) {
+                ' when calling ' + item.functionName + ' and execute hooks', function (done) {
 
                 var expectedFunction = getFunctionFromName(kwsSdk, item.functionName);
 
@@ -165,6 +164,94 @@ describe('KwsSdk', function () {
                             .eql(item.expectedJson);
                         should(stubs[item.expectedMethod].lastCall.args[1].qs)
                             .eql(item.expectedQs);
+                        done();
+                    });
+            });
+        });
+    });
+
+    describe('extending with hooks', function () {
+        let appId = 1234;
+        let hooksOpts = _.clone(kwsSdkOpts);
+        hooksOpts.hooks = {
+            beforeRequest: function() {}, //yes it's needed
+            afterRequest: function() {} //yes it's needed
+        };
+        let kwsApiWithHooks = new KwsSdk(hooksOpts);
+        let spies = {};
+        spies.beforeRequest = sinon.spy(hooksOpts.hooks, 'beforeRequest');
+        spies.afterRequest = sinon.spy(hooksOpts.hooks, 'afterRequest');
+
+        beforeEach(function (done) {
+            stubData.token = jwt.sign({
+                appId: appId,
+                clientId: hooksOpts.saAppId
+            }, 'whatever', {});
+            stubData.resp = {example: 'whatever'};
+            done();
+        });
+
+        afterEach(function(done){
+            spies.beforeRequest.reset();
+            spies.afterRequest.reset();
+            done();
+        });
+
+        _.each([
+            {
+                functionName: 'v1.app.user.getMap',
+                expectedPath: '/v1/apps/' + appId + '/users/map',
+                expectedMethod: 'get',
+                params: {},
+                expectedJson: true,
+                expectedQs: {}
+            },
+            {
+                functionName: 'v1.app.getStatistics',
+                expectedPath: '/v1/apps/' + appId + '/statistics',
+                expectedMethod: 'get',
+                params: {},
+                expectedJson: true,
+                expectedQs: {}
+            },
+            {
+                functionName: 'v1.app.notify',
+                expectedPath: '/v1/apps/' + appId + '/notify',
+                expectedMethod: 'post',
+                params: {attribute: 'whatever'},
+                expectedJson: {attribute: 'whatever'},
+                expectedQs: undefined
+            }
+        ], function (item) {
+            it('should make a ' + item.expectedMethod + ' request to ' + item.expectedPath +
+                ' when calling ' + item.functionName + ' and execute hooks', function (done) {
+
+                let expectedFunction = getFunctionFromName(kwsApiWithHooks, item.functionName);
+
+                expectedFunction(item.params)
+                    .then(function (resp)  {
+                        should(resp).eql(stubData.resp);
+                        should(stubs[item.expectedMethod].callCount).eql(1);
+                        should(stubs[item.expectedMethod].lastCall.args[0])
+                            .eql(hooksOpts.kwsApiHost + item.expectedPath);
+                        should(stubs[item.expectedMethod].lastCall.args[1].json)
+                            .eql(item.expectedJson);
+                        should(stubs[item.expectedMethod].lastCall.args[1].qs)
+                            .eql(item.expectedQs);
+                        should(spies.beforeRequest.callCount).eql(1);
+                        should(spies.beforeRequest.lastCall.args[0]).eql({
+                            method: item.expectedMethod,
+                            path: hooksOpts.kwsApiHost + item.expectedPath
+                        });
+                        should(spies.afterRequest.callCount).eql(1);
+                        should(typeof spies.afterRequest.lastCall.args[0]).eql('object');
+                        should(typeof spies.afterRequest.lastCall.args[0].requestTime).eql('number');
+                        delete spies.afterRequest.lastCall.args[0].requestTime;
+                        should(spies.afterRequest.lastCall.args[0]).eql({
+                            method: item.expectedMethod,
+                            path: hooksOpts.kwsApiHost + item.expectedPath
+                        });
+                        should(spies.afterRequest.lastCall.args[1]).eql(stubData.resp);
                         done();
                     });
             });
