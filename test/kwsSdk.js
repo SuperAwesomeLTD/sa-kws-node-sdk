@@ -152,7 +152,7 @@ describe('KwsSdk', function () {
             it('should make a ' + item.expectedMethod + ' request to ' + item.expectedPath +
                 ' when calling ' + item.functionName + ' and execute hooks', function (done) {
 
-                var expectedFunction = getFunctionFromName(kwsSdk, item.functionName);
+                let expectedFunction = getFunctionFromName(kwsSdk, item.functionName);
 
                 expectedFunction(item.params)
                     .then(function (resp)  {
@@ -175,12 +175,16 @@ describe('KwsSdk', function () {
         let hooksOpts = _.clone(kwsSdkOpts);
         hooksOpts.hooks = {
             beforeRequest: function() {}, //yes it's needed
-            afterRequest: function() {} //yes it's needed
+            afterRequest: function() {}, //yes it's needed
+            afterEachRequest: function() {}, //yes it's needed
+            beforeEachRequest: function() {} //yes it's needed
         };
         let kwsApiWithHooks = new KwsSdk(hooksOpts);
         let spies = {};
         spies.beforeRequest = sinon.spy(hooksOpts.hooks, 'beforeRequest');
         spies.afterRequest = sinon.spy(hooksOpts.hooks, 'afterRequest');
+        spies.afterEachRequest = sinon.spy(hooksOpts.hooks, 'afterEachRequest');
+        spies.beforeEachRequest = sinon.spy(hooksOpts.hooks, 'beforeEachRequest');
 
         beforeEach(function (done) {
             stubData.token = jwt.sign({
@@ -194,6 +198,8 @@ describe('KwsSdk', function () {
         afterEach(function(done){
             spies.beforeRequest.reset();
             spies.afterRequest.reset();
+            spies.afterEachRequest.reset();
+            spies.beforeEachRequest.reset();
             done();
         });
 
@@ -204,7 +210,9 @@ describe('KwsSdk', function () {
                 expectedMethod: 'get',
                 params: {},
                 expectedJson: true,
-                expectedQs: {}
+                expectedQs: {},
+                expectedBeforeHooksCalls: 2,
+                expectedAfterHooksCalls: 2
             },
             {
                 functionName: 'v1.app.getStatistics',
@@ -212,7 +220,9 @@ describe('KwsSdk', function () {
                 expectedMethod: 'get',
                 params: {},
                 expectedJson: true,
-                expectedQs: {}
+                expectedQs: {},
+                expectedBeforeHooksCalls: 1,
+                expectedAfterHooksCalls: 1
             },
             {
                 functionName: 'v1.app.notify',
@@ -220,7 +230,9 @@ describe('KwsSdk', function () {
                 expectedMethod: 'post',
                 params: {attribute: 'whatever'},
                 expectedJson: {attribute: 'whatever'},
-                expectedQs: undefined
+                expectedQs: undefined,
+                expectedBeforeHooksCalls: 1,
+                expectedAfterHooksCalls: 1
             }
         ], function (item) {
             it('should make a ' + item.expectedMethod + ' request to ' + item.expectedPath +
@@ -238,11 +250,13 @@ describe('KwsSdk', function () {
                             .eql(item.expectedJson);
                         should(stubs[item.expectedMethod].lastCall.args[1].qs)
                             .eql(item.expectedQs);
+
                         should(spies.beforeRequest.callCount).eql(1);
                         should(spies.beforeRequest.lastCall.args[0]).eql({
                             method: item.expectedMethod,
                             path: hooksOpts.kwsApiHost + item.expectedPath
                         });
+
                         should(spies.afterRequest.callCount).eql(1);
                         should(typeof spies.afterRequest.lastCall.args[0]).eql('object');
                         should(typeof spies.afterRequest.lastCall.args[0].requestTime).eql('number');
@@ -252,6 +266,30 @@ describe('KwsSdk', function () {
                             path: hooksOpts.kwsApiHost + item.expectedPath
                         });
                         should(spies.afterRequest.lastCall.args[1]).eql(stubData.resp);
+
+                        should(spies.beforeEachRequest.callCount).eql(item.expectedBeforeHooksCalls);
+                        if (item.expectedBeforeHooksCalls > 1) {
+                            should(spies.beforeEachRequest.firstCall.args[0]).eql({
+                                method: 'post',
+                                path: hooksOpts.kwsApiHost + '/oauth/token'
+                            });
+                        }
+                        should(spies.beforeEachRequest.lastCall.args[0]).eql({
+                            method: item.expectedMethod,
+                            path: hooksOpts.kwsApiHost + item.expectedPath
+                        });
+
+                        should(spies.afterEachRequest.callCount).eql(item.expectedAfterHooksCalls);
+                        should(typeof spies.afterEachRequest.lastCall.args[0]).eql('object');
+                        should(typeof spies.afterEachRequest.lastCall.args[0].requestTime).eql('number');
+                        delete spies.afterEachRequest.lastCall.args[0].requestTime;
+                        should(spies.afterEachRequest.lastCall.args[0]).eql({
+                            method: item.expectedMethod,
+                            path: hooksOpts.kwsApiHost + item.expectedPath
+                        });
+                        should(spies.afterEachRequest.lastCall.args[1]).eql(stubData.resp);
+
+
                         done();
                     });
             });
