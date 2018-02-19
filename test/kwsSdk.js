@@ -212,7 +212,9 @@ describe('KwsSdk', function () {
                 expectedJson: true,
                 expectedQs: {},
                 expectedBeforeHooksCalls: 2,
-                expectedAfterHooksCalls: 2
+                expectedAfterHooksCalls: 2,
+                expectedBeforeEachHooksCalls: 2,
+                expectedAfterEachHooksCalls: 2
             },
             {
                 functionName: 'v1.app.getStatistics',
@@ -222,7 +224,9 @@ describe('KwsSdk', function () {
                 expectedJson: true,
                 expectedQs: {},
                 expectedBeforeHooksCalls: 1,
-                expectedAfterHooksCalls: 1
+                expectedAfterHooksCalls: 1,
+                expectedBeforeEachHooksCalls: 1,
+                expectedAfterEachHooksCalls: 1
             },
             {
                 functionName: 'v1.app.notify',
@@ -232,7 +236,9 @@ describe('KwsSdk', function () {
                 expectedJson: {attribute: 'whatever'},
                 expectedQs: undefined,
                 expectedBeforeHooksCalls: 1,
-                expectedAfterHooksCalls: 1
+                expectedAfterHooksCalls: 1,
+                expectedBeforeEachHooksCalls: 1,
+                expectedAfterEachHooksCalls: 1
             }
         ], function (item) {
             it('should make a ' + item.expectedMethod + ' request to ' + item.expectedPath +
@@ -266,20 +272,20 @@ describe('KwsSdk', function () {
                             path: hooksOpts.kwsApiHost + item.expectedPath
                         });
                         should(spies.afterRequest.lastCall.args[1]).eql(stubData.resp);
-
-                        should(spies.beforeEachRequest.callCount).eql(item.expectedBeforeHooksCalls);
+                        should(spies.beforeEachRequest.callCount).eql(item.expectedBeforeEachHooksCalls);
                         if (item.expectedBeforeHooksCalls > 1) {
                             should(spies.beforeEachRequest.firstCall.args[0]).eql({
                                 method: 'post',
                                 path: hooksOpts.kwsApiHost + '/oauth/token'
                             });
                         }
+
                         should(spies.beforeEachRequest.lastCall.args[0]).eql({
                             method: item.expectedMethod,
                             path: hooksOpts.kwsApiHost + item.expectedPath
                         });
 
-                        should(spies.afterEachRequest.callCount).eql(item.expectedAfterHooksCalls);
+                        should(spies.afterEachRequest.callCount).eql(item.expectedAfterEachHooksCalls);
                         should(typeof spies.afterEachRequest.lastCall.args[0]).eql('object');
                         should(typeof spies.afterEachRequest.lastCall.args[0].requestTime).eql('number');
                         delete spies.afterEachRequest.lastCall.args[0].requestTime;
