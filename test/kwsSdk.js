@@ -56,7 +56,7 @@ describe('KwsSdk', function () {
 
         stubs.post = sandbox.stub(rp, 'post', function (url) {
             if (url === kwsSdkOpts.kwsApiHost + '/oauth/token') {
-                return BPromise.resolve({access_token: stubData.token}); // jshint ignore:line
+                return BPromise.resolve({body: {access_token: stubData.token}}); // jshint ignore:line
             } else {
                 return BPromise.resolve(stubData.resp);
             }
@@ -119,7 +119,7 @@ describe('KwsSdk', function () {
                 appId: appId,
                 clientId: kwsSdkOpts.saAppId
             }, 'whatever', {});
-            stubData.resp = {example: 'whatever'};
+            stubData.resp = {body: {example: 'whatever'}};
             done();
         });
 
@@ -156,7 +156,7 @@ describe('KwsSdk', function () {
 
                 expectedFunction(item.params)
                     .then(function (resp)  {
-                        should(resp).eql(stubData.resp);
+                        should(resp).eql(stubData.resp.body);
                         should(stubs[item.expectedMethod].callCount).eql(1);
                         should(stubs[item.expectedMethod].lastCall.args[0])
                             .eql(kwsSdkOpts.kwsApiHost + item.expectedPath);
@@ -191,7 +191,7 @@ describe('KwsSdk', function () {
                 appId: appId,
                 clientId: hooksOpts.saAppId
             }, 'whatever', {});
-            stubData.resp = {example: 'whatever'};
+            stubData.resp = { body: {example: 'whatever'} };
             done();
         });
 
@@ -248,7 +248,7 @@ describe('KwsSdk', function () {
 
                 expectedFunction(item.params)
                     .then(function (resp)  {
-                        should(resp).eql(stubData.resp);
+                        should(resp).eql(stubData.resp.body);
                         should(stubs[item.expectedMethod].callCount).eql(1);
                         should(stubs[item.expectedMethod].lastCall.args[0])
                             .eql(hooksOpts.kwsApiHost + item.expectedPath);
@@ -387,7 +387,7 @@ describe('KwsSdk', function () {
 
                 expectedFunction(item.params)
                     .then(function (resp)  {
-                        should(resp).eql(stubData.resp);
+                        should(resp).eql(stubData.resp.body);
                         should(stubs[item.expectedMethod].callCount).eql(1);
                         should(stubs[item.expectedMethod].lastCall.args[0])
                             .eql(kwsSdkOpts.kwsApiHost + item.expectedPath);
@@ -426,7 +426,7 @@ describe('KwsSdk', function () {
 
             expectedFunction({userId: userId, appId: appId})
                 .then(function (resp)  {
-                    should(resp).eql(stubData.resp);
+                    should(resp).eql(stubData.resp.body);
                     should(stubs.post.callCount).eql(2);
                     should(stubs.post.lastCall.args[0]).eql(kwsSdkOpts.kwsApiHost + '/v1/users/' + userId + '/apps');
                     should(stubs.post.lastCall.args[1].headers['X-KWS-external-ids']).eql(true);
