@@ -49,12 +49,16 @@ describe('KwsSdk', function () {
 
         stubData = {
             token: '',
-            resp: {}
+            resp: {
+                body: {
+                    testData: 123
+                }
+            }
         };
 
         sandbox = sinon.sandbox.create();
 
-        stubs.post = sandbox.stub(rp, 'post', function (url) {
+        stubs.post = sandbox.stub(rp, 'post').callsFake(function (url) {
             if (url === kwsSdkOpts.kwsApiHost + '/oauth/token') {
                 return BPromise.resolve({body: {access_token: stubData.token}}); // jshint ignore:line
             } else {
@@ -62,15 +66,15 @@ describe('KwsSdk', function () {
             }
         });
 
-        stubs.get = sandbox.stub(rp, 'get', function () {
+        stubs.get = sandbox.stub(rp, 'get').callsFake(function () {
             return BPromise.resolve(stubData.resp);
         });
 
-        stubs.put = sandbox.stub(rp, 'put', function () {
+        stubs.put = sandbox.stub(rp, 'put').callsFake(function () {
             return BPromise.resolve(stubData.resp);
         });
 
-        stubs.del = sandbox.stub(rp, 'del', function () {
+        stubs.del = sandbox.stub(rp, 'del').callsFake(function () {
             return BPromise.resolve(stubData.resp);
         });
 
@@ -191,7 +195,6 @@ describe('KwsSdk', function () {
                 appId: appId,
                 clientId: hooksOpts.saAppId
             }, 'whatever', {});
-            stubData.resp = { body: {example: 'whatever'} };
             done();
         });
 
@@ -432,6 +435,102 @@ describe('KwsSdk', function () {
                     should(stubs.post.lastCall.args[1].headers['X-KWS-external-ids']).eql(true);
                     done();
                 });
+        });
+
+        it('should make the second request with the X-KWS-external-ids header set if the first request failed with a 401', function (done) {
+
+            var appId = 1234;
+            var userId = 222;
+            var kwsSdk = new KwsSdk({
+                saAppId: 'test_app',
+                saAppApiKey: 'test_key',
+                kwsApiHost: 'https://kwsapi.test.superawesome.tv',
+                externalUserIds: true,
+                endpoints: {
+                    'v1': {
+                        'user.app.create': {
+                            'alias': null
+                        }
+                    }
+                }
+            });
+            var createUserFunction = getFunctionFromName(kwsSdk, 'v1.user.app.create');
+
+            sandbox.restore();
+            sandbox.create();
+            stubs.post = sandbox.stub(rp, 'post');
+            stubs.post.onCall(0).returns(BPromise.resolve({body: {access_token: stubData.token}}));
+            stubs.post.onCall(1).rejects({ statusCode: 401 });
+            stubs.post.onCall(2).returns(BPromise.resolve({body: {access_token: stubData.token}}));
+            stubs.post.onCall(3).returns(BPromise.resolve(stubData.resp));
+
+            createUserFunction({userId: userId, appId: appId})
+                .then(function (resp) {
+                    
+                    should(resp).eql(stubData.resp.body);
+                    should(stubs.post.callCount).eql(4);
+                    
+                    // Authenticates
+                    should(stubs.post.getCall(0).args[0]).eql(kwsSdkOpts.kwsApiHost + '/oauth/token');
+
+                    // Call to API fails
+                    should(stubs.post.getCall(1).args[0]).eql(kwsSdkOpts.kwsApiHost + '/v1/users/' + userId + '/apps');
+                    should(stubs.post.getCall(1).args[1].headers['X-KWS-external-ids']).eql(true);
+                    
+                    // Re-authenticates
+                    should(stubs.post.getCall(2).args[0]).eql(kwsSdkOpts.kwsApiHost + '/oauth/token');
+
+                    // Retries calling API
+                    should(stubs.post.getCall(3).args[0]).eql(kwsSdkOpts.kwsApiHost + '/v1/users/' + userId + '/apps');
+                    should(stubs.post.getCall(3).args[1].headers['X-KWS-external-ids']).eql(true);
+
+                    done();
+                });
+        });
+
+        it('should only make the request once if the first request fails with a non-401 error', function (done) {
+
+            var appId = 1234;
+            var userId = 222;
+            var kwsSdk = new KwsSdk({
+                saAppId: 'test_app',
+                saAppApiKey: 'test_key',
+                kwsApiHost: 'https://kwsapi.test.superawesome.tv',
+                externalUserIds: true,
+                endpoints: {
+                    'v1': {
+                        'user.app.create': {
+                            'alias': null
+                        }
+                    }
+                }
+            });
+            var createUserFunction = getFunctionFromName(kwsSdk, 'v1.user.app.create');
+
+            sandbox.restore();
+            sandbox.create();
+            stubs.post = sandbox.stub(rp, 'post');
+            stubs.post.onCall(0).returns(BPromise.resolve({body: {access_token: stubData.token}}));
+            stubs.post.onCall(1).rejects({ statusCode: 400, message: 'validation error' });
+
+            createUserFunction({userId: userId, appId: appId})
+                .then(function (resp) {
+                    done('Unexpected');
+                })
+                .catch(function(err) {
+                    should(err.statusCode).eql(400);
+                    should(err.message).eql('validation error');
+
+                    should(stubs.post.callCount).eql(2);
+
+                    // Authenticates
+                    should(stubs.post.getCall(0).args[0]).eql(kwsSdkOpts.kwsApiHost + '/oauth/token');
+
+                    // Call to API fails
+                    should(stubs.post.getCall(1).args[0]).eql(kwsSdkOpts.kwsApiHost + '/v1/users/' + userId + '/apps');
+                    should(stubs.post.getCall(1).args[1].headers['X-KWS-external-ids']).eql(true);
+                    done();
+                })
         });
     });
 
