@@ -18,7 +18,8 @@ describe('KwsSdk', function () {
     let kwsSdkOpts = {
         saAppId: 'test_app',
         saAppApiKey: 'test_key',
-        kwsApiHost: 'https://kwsapi.test.superawesome.tv'
+        kwsApiHost: 'https://kwsapi.test.superawesome.tv',
+        customTokenEndpointHeader: 'x-custom-token-header'
     };
     let kwsSdk = new KwsSdk(kwsSdkOpts);
 
@@ -112,6 +113,14 @@ describe('KwsSdk', function () {
                     should(stubs.post.callCount).eql(1);
                     done();
                 });
+        });
+
+        it('should send the custom header in the token call', () => {
+            return kwsSdk.v1.app.user.getMap()
+            .finally(function () {
+                should(stubs.post.callCount).eql(1);
+                should(stubs.post.firstCall.args[1].headers['x-custom-token-header']).eql('1');
+            });
         });
     });
 
@@ -466,17 +475,17 @@ describe('KwsSdk', function () {
 
             createUserFunction({userId: userId, appId: appId})
                 .then(function (resp) {
-                    
+
                     should(resp).eql(stubData.resp.body);
                     should(stubs.post.callCount).eql(4);
-                    
+
                     // Authenticates
                     should(stubs.post.getCall(0).args[0]).eql(kwsSdkOpts.kwsApiHost + '/oauth/token');
 
                     // Call to API fails
                     should(stubs.post.getCall(1).args[0]).eql(kwsSdkOpts.kwsApiHost + '/v1/users/' + userId + '/apps');
                     should(stubs.post.getCall(1).args[1].headers['X-KWS-external-ids']).eql(true);
-                    
+
                     // Re-authenticates
                     should(stubs.post.getCall(2).args[0]).eql(kwsSdkOpts.kwsApiHost + '/oauth/token');
 
