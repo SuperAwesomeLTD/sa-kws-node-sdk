@@ -33,17 +33,14 @@ describe('KwsSdk', function () {
         return expectedFunction;
     }
 
-    function generateWebhookSignature(originalUrl, data, secretKey) {
-        var signedData = originalUrl;
+    function generateWebhookSignature(secretKey, url, data) {
+        const dataToSign = JSON.stringify({
+          secretKey,
+          url,
+          data,
+        });
 
-        for(var key in data) {
-            signedData += key;
-            signedData += data[key];
-        }
-
-        signedData += secretKey;
-
-        return crypto.createHmac('sha1', secretKey).update(signedData).digest('hex').toString('base64');
+        return crypto.createHmac('sha256', secretKey).update(dataToSign).digest('hex');
     }
 
     beforeEach(function (done) {
@@ -546,7 +543,8 @@ describe('KwsSdk', function () {
     describe('webhook middleware', function () {
         it('should validate the signature', function(done){
             var secretKey = 'secretTestKey';
-            var middleware = kwsSdk.validWebhookSignature(secretKey);
+            var url = 'https://test.example.com/webhook/endpoint';
+            var middleware = kwsSdk.validWebhookSignature(secretKey, url);
             var next = function(){
                 should(true).eql(false);
             };
@@ -558,7 +556,6 @@ describe('KwsSdk', function () {
             };
 
             var req = {
-                originalUrl: '/webhook/endpoint',
                 body: {
                     permissions: {
                         email: 'Denied',
@@ -576,7 +573,7 @@ describe('KwsSdk', function () {
             middleware(req, res, next);
 
             //now with a valid signature
-            req.headers['x-kwsapi-signature'] = generateWebhookSignature(req.originalUrl, req.body, secretKey);
+            req.headers['x-kwsapi-signature'] = generateWebhookSignature(secretKey, url, req.body);
             res.sendStatus = function(){
                 should(true).eql(false);
             };
