@@ -10,7 +10,7 @@
     "decamelize": "~1.1.1",
     "express": "^4.16.0",
     "inflected": "^1.1.7",
-    "lodash": "^4.17.2",
+    "lodash": "^4.17.15",
     "request": "^2.84.0",
     "request-promise": "^4.2.2"
   },
